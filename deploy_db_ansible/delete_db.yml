@@ -4,9 +4,10 @@
     connection: local
     vars:
       instance_id: wordpressdbclixxjenkins
+      ansible_python_interpreter: "{{ lookup('env', 'VIRTUAL_ENV') }}/bin/python3"
     tasks:
       - name: remove a db instance without taking a final snapshot
-        rds_instance:
+        community.aws.rds_instance:
             id: "{{ instance_id }}"
             state: absent
             skip_final_snapshot: True

@@ -6,6 +6,7 @@
       instance_id: wordpressdbclixxjenkins
       db_snapshot: clixx-db-final-snapshot
       security_group: sg-00014b7e773d4da45
+      ansible_python_interpreter: "{{ lookup('env', 'VIRTUAL_ENV') }}/bin/python3"
     tasks:
        - name: Restore DB from snapshot
          community.aws.rds_instance:
