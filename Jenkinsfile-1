@@ -4,7 +4,7 @@ pipeline {
     environment {
         VERSION = "1.0.${BUILD_NUMBER}"
         PATH = "${PATH}:${getSonarPath()}"
-        SONAR_SCANNER_OPTS = "-Xmx512m --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED"
+        SONAR_SCANNER_OPTS = "-Xmx2048m --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED"
     }
 
     stages {
@@ -16,8 +16,9 @@ pipeline {
         withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]){
         withSonarQubeEnv('SonarQubeScanner') {
           sh """ ${scannerHome}/bin/sonar-scanner \
-          -Dsonar.projectKey=CliXX-App-Pamilerin   \
-          -Dsonar.login=${SONAR_TOKEN} """
+          -Dsonar.projectKey=CliXX-App-Enoch   \
+          -Dsonar.login=${SONAR_TOKEN} \
+          -Dsonar.exclusions=wordpress/**,wp-includes/**,wp-admin/**,wp-content/themes/twenty*/**,wp-content/plugins/**/*.min.js """
         }
         }
         }
