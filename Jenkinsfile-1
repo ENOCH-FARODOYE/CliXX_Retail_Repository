@@ -76,7 +76,7 @@ pipeline {
                PASSWORD='W3lcome123'
                DBNAME='wordpressdb'
                SERVER_IP=$(curl -s http://checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
-               SERVER_INSTANCE='wordpressdbclixxjenkins.cedq0gwwuj1n.us-east-1.rds.amazonaws.com'
+               SERVER_INSTANCE='wordpressdbclixxjenkins.c0vi6ce6g1hc.us-east-1.rds.amazonaws.com'
                echo "use wordpressdb;" >> $WORKSPACE/db.setup
                echo "UPDATE wp_options SET option_value = '$SERVER_IP' WHERE option_value LIKE 'http%';">> $WORKSPACE/db.setup
                mysql -u $USERNAME --password=$PASSWORD -h $SERVER_INSTANCE  -D  $DBNAME < $WORKSPACE/db.setup
