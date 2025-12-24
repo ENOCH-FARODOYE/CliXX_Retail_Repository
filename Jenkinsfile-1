@@ -56,32 +56,46 @@ pipeline {
 
   stage ('Restore CliXX Database') {
           steps {
+              withCredentials([
+                  string(credentialsId: 'RDS_INSTANCE_ID', variable: 'RDS_INSTANCE_ID'),
+                  string(credentialsId: 'RDS_SNAPSHOT_ARN', variable: 'RDS_SNAPSHOT_ARN')
+              ]){
               sh '''
             python3 -m venv python3-virtualenv
             source python3-virtualenv/bin/activate
             python3 --version
             pip3 install boto3 botocore boto
             ansible-galaxy collection install community.aws
+            export ANSIBLE_RDS_INSTANCE_ID=${RDS_INSTANCE_ID}
+            export ANSIBLE_RDS_SNAPSHOT_ARN=${RDS_SNAPSHOT_ARN}
             ansible-playbook $WORKSPACE/deploy_db_ansible/deploy_db.yml
             deactivate
 
               '''
+              }
           }
         }
 
   stage ('Configure DB Instance') {
           steps {
+              withCredentials([
+                  string(credentialsId: 'DB_USER_NAME', variable: 'DB_USER_NAME'),
+                  string(credentialsId: 'DB_PASSWORD', variable: 'DB_PASSWORD'),
+                  string(credentialsId: 'DB_NAME', variable: 'DB_NAME'),
+                  string(credentialsId: 'SERVER_INSTANCE', variable: 'SERVER_INSTANCE')
+              ]){
               sh '''
-               USERNAME='wordpressuser'
-               PASSWORD='W3lcome123'
-               DBNAME='wordpressdb'
+               USERNAME=${DB_USER_NAME}
+               PASSWORD=${DB_PASSWORD}
+               DBNAME=${DB_NAME}
                SERVER_IP=$(curl -s http://checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
-               SERVER_INSTANCE='wordpressdbclixxjenkins.c0vi6ce6g1hc.us-east-1.rds.amazonaws.com'
+               SERVER_INSTANCE=${SERVER_INSTANCE}
                echo "use wordpressdb;" >> $WORKSPACE/db.setup
                echo "UPDATE wp_options SET option_value = '$SERVER_IP' WHERE option_value LIKE 'http%';">> $WORKSPACE/db.setup
                mysql -u $USERNAME --password=$PASSWORD -h $SERVER_INSTANCE  -D  $DBNAME < $WORKSPACE/db.setup
 
               '''
+              }
           }
         }
 
@@ -90,13 +104,18 @@ pipeline {
              script {
                 def userInput = input(id: 'confirm', message: 'Push Image To ECR?', parameters: [ [$class: 'BooleanParameterDefinition', defaultValue: false, description: 'Push to ECR?', name: 'confirm'] ])
              }
+              withCredentials([
+                  string(credentialsId: 'ECR_USERNAME', variable: 'ECR_USERNAME'),
+                  string(credentialsId: 'ECR_REPO', variable: 'ECR_REPO')
+              ]){
               sh '''
-                aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 451873237827.dkr.ecr.us-east-1.amazonaws.com/clixx-repository
-                docker tag clixx-image:$VERSION 451873237827.dkr.ecr.us-east-1.amazonaws.com/clixx-repository:clixx-image-$VERSION
-                docker tag clixx-image:$VERSION 451873237827.dkr.ecr.us-east-1.amazonaws.com/clixx-repository:latest
-                docker push 451873237827.dkr.ecr.us-east-1.amazonaws.com/clixx-repository:clixx-image-$VERSION
-                docker push 451873237827.dkr.ecr.us-east-1.amazonaws.com/clixx-repository:latest
+                aws ecr get-login-password --region us-east-1 | docker login --username ${ECR_USERNAME} --password-stdin ${ECR_REPO}
+                docker tag clixx-image:$VERSION ${ECR_REPO}:clixx-image-$VERSION
+                docker tag clixx-image:$VERSION ${ECR_REPO}:latest
+                docker push ${ECR_REPO}:clixx-image-$VERSION
+                docker push ${ECR_REPO}:latest
               '''
+              }
           }
         }
 
@@ -105,18 +124,23 @@ pipeline {
              script {
                 def userInput = input(id: 'confirm', message: 'Tear Down Environment?', parameters: [ [$class: 'BooleanParameterDefinition', defaultValue: false, description: 'Tear Down Environment?', name: 'confirm'] ])
              }
+              withCredentials([
+                  string(credentialsId: 'RDS_INSTANCE_ID', variable: 'RDS_INSTANCE_ID')
+              ]){
               sh '''
             python3 -m venv python3-virtualenv
             source python3-virtualenv/bin/activate
             python3 --version
             pip3 install boto3 botocore boto
             ansible-galaxy collection install community.aws
+            export ANSIBLE_RDS_INSTANCE_ID=${RDS_INSTANCE_ID}
             ansible-playbook $WORKSPACE/deploy_db_ansible/delete_db.yml
             deactivate
             docker stop clixx-cont
             docker rm  clixx-cont
 
               '''
+              }
           }
         }
 

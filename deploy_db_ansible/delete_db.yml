@@ -3,7 +3,7 @@
     hosts: localhost
     connection: local
     vars:
-      instance_id: wordpressdbclixxjenkins
+      instance_id: "{{ lookup('env', 'ANSIBLE_RDS_INSTANCE_ID') }}"
       ansible_python_interpreter: "{{ lookup('env', 'VIRTUAL_ENV') }}/bin/python3"
     tasks:
       - name: remove a db instance without taking a final snapshot
