@@ -16,7 +16,7 @@
            snapshot_identifier: '{{ db_snapshot }}'
            engine: mysql
            region: us-east-1
-           instance_type: db.t2.small
+           instance_type: db.t3.small
            wait: yes
            
        - name: Modify to add SG
