@@ -1,0 +1,27 @@
+---
+  - name: "CliXX DB Deployment Ansible Playbook"
+    hosts: localhost
+    connection: local
+    become: ec2-user
+    vars:
+      instance_id: wordpressdbclixxjenkins
+      db_snapshot: clixx-db-final-snapshot
+      security_group: sg-00014b7e773d4da45
+    tasks:
+       - name: Restore DB from snapshot
+         local_action:
+           module: rds
+           command: restore
+           snapshot: '{{ db_snapshot }}'
+           instance_name: '{{ instance_id }}'
+           region: us-east-1
+           wait: yes
+           instance_type: db.t2.small
+           wait_timeout: 1200
+       - name: Modify to add SG
+         local_action:
+           module: rds
+           command: modify
+           instance_name: '{{ instance_id }}'
+           region: us-east-1
+           vpc_security_groups: '{{ security_group }}'

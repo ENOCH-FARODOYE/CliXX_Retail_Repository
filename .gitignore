@@ -7,3 +7,4 @@ wp-admin/includes/*
 wp-includes/js/tinymce/*
 wp-includes/ID3/module.audio.ac3.php
 .scannerwork/
+python3-virtualenv/*

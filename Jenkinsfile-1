@@ -3,58 +3,112 @@ pipeline {
 
     environment {
         VERSION = "1.0.${BUILD_NUMBER}"
-        PATH = "${PATH}:${getSonarPath()}"
-        SONAR_SCANNER_OPTS = "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED"
+        PATH = "${PATH}:${getSonarPath()}:${getDockerPath()}"
     }
 
     stages {
-        stage ('Sonarqube Scan') {
-            steps {
-                script {
-                    scannerHome = tool 'sonarqube'
-                }
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('SonarQubeScanner') {
-                        sh """ ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=CliXX-App-Enoch \
-                            -Dsonar.login=${SONAR_TOKEN} """
-                    }
-                }
-            }
+        stage ('Sonarcube Scan') {
+        steps {
+         script {
+          scannerHome = tool 'sonarqube'
+        }
+        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]){
+        withSonarQubeEnv('SonarQubeScanner') {
+          sh """ ${scannerHome}/bin/sonar-scanner \
+          -Dsonar.projectKey=CliXX-App-Pamilerin   \
+          -Dsonar.login=${SONAR_TOKEN} """
+        }
+        }
         }
 
-        stage('Quality Gate') {
+}
+
+ stage('Quality Gate') {
             steps {
                 timeout(time: 3, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
-                }
+            }
             }
         }
 
-        stage ('Build Docker Image') {
-            steps {
-                sh "docker build . -t clixx-image:$VERSION"
-            }
+          stage ('Build Docker Image') {
+          steps {
+            sh "docker build . -t clixx-image:$VERSION "
+          }
         }
 
-        stage ('Starting Docker Image') {
-            steps {
-                sh '''
-                if ( docker ps | grep clixx-cont ) then
-                    echo "Docker container exists, killing it"
-                    docker stop clixx-cont
-                    docker rm clixx-cont
-                    docker run --name clixx-cont -p 80:80 -d clixx-image:$VERSION
-                else
-                    docker run --name clixx-cont -p 80:80 -d clixx-image:$VERSION
-                fi
-                '''
-            }
+  stage ('Starting Docker Image') {
+          steps {
+              sh '''
+              if ( docker ps|grep clixx-cont ) then
+                 echo "Docker image exists, killing it"
+                 docker stop clixx-cont
+                 docker rm clixx-cont
+                 docker run --name clixx-cont  -p 80:80 -d clixx-image:$VERSION
+              else
+                 docker run --name clixx-cont  -p 80:80 -d clixx-image:$VERSION 
+              fi
+              '''
+          }
         }
+
+  stage ('Restore CliXX Database') {
+          steps {
+              sh '''
+            python3 -m venv python3-virtualenv
+            source python3-virtualenv/bin/activate
+            python3 --version
+            pip3 install boto3 botocore boto
+            ansible-playbook $WORKSPACE/deploy_db_ansible/deploy_db.yml
+            deactivate
+
+              '''
+          }
+        }
+
+  stage ('Configure DB Instance') {
+          steps {
+              sh '''
+               USERNAME='wordpressuser'
+               PASSWORD='W3lcome123'
+               DBNAME='wordpressdb'
+               SERVER_IP=$(curl -s http://checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
+               SERVER_INSTANCE='wordpressdbclixxjenkins.cedq0gwwuj1n.us-east-1.rds.amazonaws.com'
+               echo "use wordpressdb;" >> $WORKSPACE/db.setup
+               echo "UPDATE wp_options SET option_value = '$SERVER_IP' WHERE option_value LIKE 'http%';">> $WORKSPACE/db.setup
+               mysql -u $USERNAME --password=$PASSWORD -h $SERVER_INSTANCE  -D  $DBNAME < $WORKSPACE/db.setup
+
+              '''
+          }
+        }
+
+      stage ('Tear Down CliXX Docker Image and Database') {
+          steps {
+             script {
+                def userInput = input(id: 'confirm', message: 'Tear Down Environment?', parameters: [ [$class: 'BooleanParameterDefinition', defaultValue: false, description: 'Tear Down Environment?', name: 'confirm'] ])
+             }
+              sh '''
+            python3 -m venv python3-virtualenv
+            source python3-virtualenv/bin/activate
+            python3 --version
+            pip3 install boto3 botocore boto
+            ansible-playbook $WORKSPACE/deploy_db_ansible/delete_db.yml
+            deactivate
+            docker stop clixx-cont
+            docker rm  clixx-cont
+
+              '''
+          }
+        }
+
     }
 }
 
-def getSonarPath() {
-    def SonarHome = tool name: 'sonarqube', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-    return SonarHome
-}
+def getSonarPath(){
+        def SonarHome= tool name: 'sonarqube', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+        return SonarHome
+    }
+def getDockerPath(){
+        def DockerHome= tool name: 'docker-inst', type: 'dockerTool'
+        return DockerHome
+    }
