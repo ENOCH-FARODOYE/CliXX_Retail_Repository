@@ -4,7 +4,7 @@
     connection: local
     vars:
       instance_id: wordpressdbclixxjenkins
-      db_snapshot: clixx-db-final-snapshot
+      db_snapshot: arn:aws:rds:us-east-1:529206289534:snapshot:clixx-db-final-snapshot
       security_group: sg-00014b7e773d4da45
       ansible_python_interpreter: "{{ lookup('env', 'VIRTUAL_ENV') }}/bin/python3"
     tasks:
