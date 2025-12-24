@@ -13,6 +13,7 @@
            state: present
            creation_source: snapshot
            snapshot_identifier: '{{ db_snapshot }}'
+           engine: mysql
            region: us-east-1
            instance_type: db.t2.small
            wait: yes
