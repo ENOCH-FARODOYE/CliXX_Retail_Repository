@@ -61,6 +61,7 @@ pipeline {
             source python3-virtualenv/bin/activate
             python3 --version
             pip3 install boto3 botocore boto
+            ansible-galaxy collection install community.aws
             ansible-playbook $WORKSPACE/deploy_db_ansible/deploy_db.yml
             deactivate
 
@@ -94,6 +95,7 @@ pipeline {
             source python3-virtualenv/bin/activate
             python3 --version
             pip3 install boto3 botocore boto
+            ansible-galaxy collection install community.aws
             ansible-playbook $WORKSPACE/deploy_db_ansible/delete_db.yml
             deactivate
             docker stop clixx-cont
