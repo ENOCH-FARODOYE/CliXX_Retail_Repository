@@ -30,6 +30,27 @@ pipeline {
                 }
             }
         }
+
+        stage ('Build Docker Image') {
+            steps {
+                sh "docker build . -t clixx-image:$VERSION"
+            }
+        }
+
+        stage ('Starting Docker Image') {
+            steps {
+                sh '''
+                if ( docker ps | grep clixx-cont ) then
+                    echo "Docker container exists, killing it"
+                    docker stop clixx-cont
+                    docker rm clixx-cont
+                    docker run --name clixx-cont -p 80:80 -d clixx-image:$VERSION
+                else
+                    docker run --name clixx-cont -p 80:80 -d clixx-image:$VERSION
+                fi
+                '''
+            }
+        }
     }
 }
 
